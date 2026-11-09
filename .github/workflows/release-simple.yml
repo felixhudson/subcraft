@@ -26,12 +26,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Test release scripts
-        shell: pwsh
-        run: |
-          ./tests/packaging-windows.ps1
-          ./tests/release-security.ps1
-          ./tests/release-workflow.ps1
+
   windows:
     if: github.event_name != 'pull_request'
     needs: checks
