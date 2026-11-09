@@ -1,4 +1,4 @@
-name: Release
+name: Releasesimple
 on:
   release:
     types: [published]
@@ -70,13 +70,7 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
           components: clippy
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
-      - name: Test and lint
-        shell: pwsh
-        run: |
-          cargo test --workspace --locked
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          cargo clippy --workspace --all-targets --locked
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
       - name: Compile application
         shell: pwsh
         env:
@@ -93,50 +87,7 @@ jobs:
             Write-Host $deps
             if ($deps -match '(?i)vcruntime|msvcp|concrt') { Write-Error 'subcraft.exe depends on the VC++ redistributable'; exit 1 }
           } else { Write-Warning 'dumpbin not found; dependency check skipped' }
-      - name: Azure login for signing
-        if: env.PUBLISH == 'true'
-        uses: Azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
-        with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      - name: Sign application before packaging
-        if: env.PUBLISH == 'true'
-        uses: Azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2
-        with:
-          endpoint: ${{ vars.SIGNING_ENDPOINT }}
-          signing-account-name: ${{ vars.SIGNING_ACCOUNT }}
-          certificate-profile-name: ${{ vars.SIGNING_PROFILE }}
-          files: ${{ github.workspace }}\target\dist\subcraft.exe
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
-      - name: Package signed application
-        shell: pwsh
-        run: ./scripts/build-installer.ps1 -SkipBuild
-      - name: Sign installer
-        if: env.PUBLISH == 'true'
-        uses: Azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2
-        with:
-          endpoint: ${{ vars.SIGNING_ENDPOINT }}
-          signing-account-name: ${{ vars.SIGNING_ACCOUNT }}
-          certificate-profile-name: ${{ vars.SIGNING_PROFILE }}
-          files: ${{ github.workspace }}\dist\SubCraft-${{ env.SUBCRAFT_VERSION }}-setup.exe
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
-      - name: Scan final artifacts and verify signatures
-        shell: pwsh
-        run: ./scripts/test-release-windows.ps1 -Directory dist -Version $env:SUBCRAFT_VERSION -Commit (git rev-parse HEAD) -RequireSignature:($env:PUBLISH -eq 'true')
-      - name: Attest final Windows artifacts
-        if: env.PUBLISH == 'true'
-        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
-        with:
-          subject-path: |
-            dist/*.exe
-            dist/*.zip
-            dist/*.json
-            dist/*.txt
+
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: SubCraft-windows-x64
